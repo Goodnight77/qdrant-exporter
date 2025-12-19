@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json" // json parsing responses from Qdrant
 	"fmt"
-	"io" // reading HTTP response bodies
 	"net/http" // making http requests & creating server
 	"time" // for sleep/delay between scrapes
 
@@ -61,61 +59,32 @@ func main() {
 // scrapeQdrant runs in background to fetch data from Qdrant and update metrics
 func scrapeQdrant() {
 	qdrantURL := "http://localhost:6333"
+	client := NewQdrantClient(qdrantURL) // create client once
 
 	for { // inf loop
-		// get list of all collections
-		resp, err := http.Get(qdrantURL + "/collections")
+		// get list of all collections using client
+		collections, err := client.GetCollections()
 		if err != nil {
-			fmt.Printf("# Error connecting to Qdrant: %v\n", err)
+			fmt.Printf("# Error getting collections: %v\n", err)
 			qdrantUp.Set(0) // set to 0 if connection fails
-			continue
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			fmt.Printf("# Error reading response: %v\n", err)
-			qdrantUp.Set(0)
-			continue
-		}
-
-		var collectionsResp CollectionsResponse
-		if err := json.Unmarshal(body, &collectionsResp); err != nil {
-			fmt.Printf("# Error parsing JSON: %v\n", err)
-			qdrantUp.Set(0)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
 		// connection successful, set qdrant_up to 1
 		qdrantUp.Set(1)
 
-		// For each collection, get detailed info
-		// logged now later exposed as metrics
-		for _, col := range collectionsResp.Result.Collections {
-			collectionName := col.Name
-
-			// Call Qdrant API for this specific collection
-			infoURL := fmt.Sprintf("%s/collections/%s", qdrantURL, collectionName)
-			infoResp, err := http.Get(infoURL)
-
+		// for each collection, get detailed info
+		for _, name := range collections {
+			info, err := client.GetCollectionInfo(name)
 			if err != nil {
-				// if we can't get info for this collection, skip it
-				fmt.Printf("# Error getting info for %s: %v\n", collectionName, err)
-				continue // skip to next coll
-			}
-
-			infoBody, _ := io.ReadAll(infoResp.Body) // read first
-			infoResp.Body.Close() // then close
-
-			var info CollectionInfoResponse
-			if err := json.Unmarshal(infoBody, &info); err != nil {
-				fmt.Printf("# Error parsing info for %s: %v\n", collectionName, err)
+				fmt.Printf("# Error getting info for %s: %v\n", name, err)
 				continue
 			}
 
 			// log collection info
 			fmt.Printf("collection=%s points=%d vectors=%d indexed=%d segments=%d status=%s\n",
-				collectionName,
+				name,
 				info.Result.PointsCount,
 				info.Result.VectorsCount,
 				info.Result.IndexedVectors,
