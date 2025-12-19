@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"net/http" // making http requests & creating server
-	"time" // for sleep/delay between scrapes
+	"net/http" // creating server
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -39,11 +38,15 @@ func main() {
 	// register the gauge metric with Prometheus
 	prometheus.MustRegister(qdrantUp)
 
+	// create qdrant client
+	client := NewQdrantClient("http://localhost:6333")
+
+	// create and register the collector
+	collector := NewQdrantCollector(client)
+	prometheus.MustRegister(collector)
+
 	// for /metrics endpoint (standard Prometheus format)
 	http.Handle("/metrics", promhttp.Handler())
-
-	// start background goroutine to scrape Qdrant and update metrics
-	go scrapeQdrant() // runs forever
 
 	fmt.Println("server starting on http://localhost:9999")
 	fmt.Println("metrics available at http://localhost:9999/metrics")
@@ -53,50 +56,6 @@ func main() {
 	err := http.ListenAndServe(":9999", nil) // start http server
 	if err != nil {
 		fmt.Printf("Error starting server: %v\n", err)
-	}
-}
-
-// scrapeQdrant runs in background to fetch data from Qdrant and update metrics
-func scrapeQdrant() {
-	qdrantURL := "http://localhost:6333"
-	client := NewQdrantClient(qdrantURL) // create client once
-
-	for { // inf loop
-		// get list of all collections using client
-		collections, err := client.GetCollections()
-		if err != nil {
-			fmt.Printf("# Error getting collections: %v\n", err)
-			qdrantUp.Set(0) // set to 0 if connection fails
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		// connection successful, set qdrant_up to 1
-		qdrantUp.Set(1)
-
-		// for each collection, get detailed info
-		for _, name := range collections {
-			info, err := client.GetCollectionInfo(name)
-			if err != nil {
-				fmt.Printf("# Error getting info for %s: %v\n", name, err)
-				continue
-			}
-
-			// log collection info
-			fmt.Printf("collection=%s points=%d vectors=%d indexed=%d segments=%d status=%s\n",
-				name,
-				info.Result.PointsCount,
-				info.Result.VectorsCount,
-				info.Result.IndexedVectors,
-				info.Result.SegmentsCount,
-				info.Result.Status)
-		}
-
-		// empty line between scrapes
-		fmt.Println()
-
-		// wait before next scrape (every 10)
-		time.Sleep(10 * time.Second)
 	}
 }
 
