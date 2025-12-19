@@ -4,7 +4,11 @@ import (
 	"encoding/json" // json parsing responses from Qdrant
 	"fmt"
 	"io" // reading HTTP response bodies
-	"net/http" // making http requests & creating server 
+	"net/http" // making http requests & creating server
+	"time" // for sleep/delay between scrapes
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // response from /collections endpoint 
@@ -27,37 +31,66 @@ type CollectionInfoResponse struct {
 	} `json:"result"`
 }
 
+// gauge metric to show if Qdrant is reachable
+var qdrantUp = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "qdrant_up",
+	Help: "Whether Qdrant is reachable",
+})
+
 func main() {
-	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) { // create /metrics endpoint 
-		qdrantURL := "http://localhost:6333"
+	// register the gauge metric with Prometheus
+	prometheus.MustRegister(qdrantUp)
 
-		// STEP 1: Get list of all collections
-		resp, err := http.Get(qdrantURL + "/collections") // get all colls call this endpoint 6333/collections
-		if err != nil { 
-			fmt.Fprintf(w, "# Error connecting to Qdrant: %v\n", err) // write directly to http resp (w is the http.responsewriter) # is a comment in Prometheus metrics
-			fmt.Fprintf(w, "qdrant_up 0\n") // if no connection we set this metric to 0 (down)
-			return // exit 
-		}
-		defer resp.Body.Close() // run this after fun finish even with error/panic 
+	// for /metrics endpoint (standard Prometheus format)
+	http.Handle("/metrics", promhttp.Handler())
 
-		body, err := io.ReadAll(resp.Body) // read resp body into byte slice []byte  return ([]byte, error)
+	// start background goroutine to scrape Qdrant and update metrics
+	go scrapeQdrant() // runs forever
+
+	fmt.Println("server starting on http://localhost:9999")
+	fmt.Println("metrics available at http://localhost:9999/metrics")
+	fmt.Println("Qdrant should be running on http://localhost:6333")
+	fmt.Println("\n--- press Ctrl+C to stop ---\n")
+
+	err := http.ListenAndServe(":9999", nil) // start http server
+	if err != nil {
+		fmt.Printf("Error starting server: %v\n", err)
+	}
+}
+
+// scrapeQdrant runs in background to fetch data from Qdrant and update metrics
+func scrapeQdrant() {
+	qdrantURL := "http://localhost:6333"
+
+	for { // inf loop
+		// get list of all collections
+		resp, err := http.Get(qdrantURL + "/collections")
 		if err != nil {
-			fmt.Fprintf(w, "# Error reading response: %v\n", err)
-			return
-		}
-// parse JSON response into our struct
-		var collectionsResp CollectionsResponse // var of type collresp 
-		if err := json.Unmarshal(body, &collectionsResp); err != nil { // parse json bytes into struct , &collectionsresp is pointer to var (needed so it modify variable )
-			fmt.Fprintf(w, "# Error parsing JSON: %v\n", err)
-			return
+			fmt.Printf("# Error connecting to Qdrant: %v\n", err)
+			qdrantUp.Set(0) // set to 0 if connection fails
+			continue
 		}
 
-		// output basic metrics
-		fmt.Fprintln(w, "# HELP qdrant_up Whether Qdrant is reachable")
-		fmt.Fprintln(w, "# TYPE qdrant_up gauge")
-		fmt.Fprintf(w, "qdrant_up 1\n")
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			fmt.Printf("# Error reading response: %v\n", err)
+			qdrantUp.Set(0)
+			continue
+		}
 
-		// STEP 3: For EACH collection, get detailed info
+		var collectionsResp CollectionsResponse
+		if err := json.Unmarshal(body, &collectionsResp); err != nil {
+			fmt.Printf("# Error parsing JSON: %v\n", err)
+			qdrantUp.Set(0)
+			continue
+		}
+
+		// connection successful, set qdrant_up to 1
+		qdrantUp.Set(1)
+
+		// For each collection, get detailed info
+		// logged now later exposed as metrics
 		for _, col := range collectionsResp.Result.Collections {
 			collectionName := col.Name
 
@@ -68,11 +101,11 @@ func main() {
 			if err != nil {
 				// if we can't get info for this collection, skip it
 				fmt.Printf("# Error getting info for %s: %v\n", collectionName, err)
-				continue // skip to next coll 
+				continue // skip to next coll
 			}
-			defer infoResp.Body.Close()
 
-			infoBody, _ := io.ReadAll(infoResp.Body) // ignore err handling 
+			infoBody, _ := io.ReadAll(infoResp.Body) // read first
+			infoResp.Body.Close() // then close
 
 			var info CollectionInfoResponse
 			if err := json.Unmarshal(infoBody, &info); err != nil {
@@ -80,38 +113,21 @@ func main() {
 				continue
 			}
 
-			// output metrics with LABELS
-			// labels are like key-value pairs that identify the collection
-
-			// Points count
-			fmt.Fprintf(w, "qdrant_collection_points{collection=\"%s\"} %d\n",
-				collectionName, info.Result.PointsCount)
-
-			// Vectors count 
-			fmt.Fprintf(w, "qdrant_collection_vectors{collection=\"%s\"} %d\n",
-				collectionName, info.Result.VectorsCount)
-
-			// Indexed vectors 
-			fmt.Fprintf(w, "qdrant_collection_indexed_vectors{collection=\"%s\"} %d\n",
-				collectionName, info.Result.IndexedVectors)
-
-			// Segments count 
-			fmt.Fprintf(w, "qdrant_collection_segments{collection=\"%s\"} %d\n",
-				collectionName, info.Result.SegmentsCount)
-
-			// Status 
-			fmt.Fprintf(w, "qdrant_collection_status{collection=\"%s\"} %d\n", 
-				collectionName, statusToNumber(info.Result.Status))
+			// log collection info
+			fmt.Printf("collection=%s points=%d vectors=%d indexed=%d segments=%d status=%s\n",
+				collectionName,
+				info.Result.PointsCount,
+				info.Result.VectorsCount,
+				info.Result.IndexedVectors,
+				info.Result.SegmentsCount,
+				info.Result.Status)
 		}
-	})
 
-	fmt.Println("server starting on http://localhost:9999")
-	fmt.Println("Qdrant should be running on http://localhost:6333")
-	fmt.Println("\n--- PRESS Ctrl+C to stop ---\n")
+		// empty line between scrapes
+		fmt.Println()
 
-	err := http.ListenAndServe(":9999", nil) // start http server 
-	if err != nil {
-		fmt.Printf("Error starting server: %v\n", err)
+		// wait before next scrape (every 10)
+		time.Sleep(10 * time.Second)
 	}
 }
 
