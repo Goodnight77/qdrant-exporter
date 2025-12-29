@@ -19,7 +19,7 @@ type qdrantCollector struct {
 }
 
 // newQdrantCollector creates a new collector
-func NewQdrantCollector(client *QdrantClient) *qdrantCollector { // return a qdradntCollector : poniter 
+func NewQdrantCollector(client *QdrantClient) *qdrantCollector { // return a  poniter to qdradntCollector
 	return &qdrantCollector{ // return @ of struct 
 		client: client,
 		pointsDesc: prometheus.NewDesc(
@@ -71,9 +71,13 @@ func (qc *qdrantCollector) Collect(ch chan<- prometheus.Metric) { // ch for metr
 	// get all collections
 	collections, err := qc.client.GetCollections()
 	if err != nil {
-		// no collections, emit no metrics
+		// qdrant is down
+		qdrantUp.Set(0)
 		return
 	}
+
+	// qdrant is up
+	qdrantUp.Set(1)
 
 	// for each collection, get info and emit metrics
 	for _, name := range collections {
