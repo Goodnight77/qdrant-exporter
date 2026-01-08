@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  exporter:
+    build: .
+    ports:
+      - "9092:9090"
+    env_file:
+      - .env
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9097:9090"
+    volumes:
+      - ./examples/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - exporter
