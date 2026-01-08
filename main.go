@@ -45,7 +45,8 @@ func main() {
 		loggerConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	}
 	logger, _ := loggerConfig.Build()
-	defer logger.Sync()
+	// defer logger.Sync() // flushes buffer, if any. ignored because often fails on stdout/stderr
+	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting Qdrant exporter",
 		zap.String("listen_address", cfg.ListenAddress),
@@ -79,20 +80,26 @@ func main() {
 		lastSuccess := collector.GetLastSuccessTime()
 		if time.Since(lastSuccess) > cfg.ScrapeInterval*2 {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintf(w, `{"status": "degraded", "last_success": "%s"}`, lastSuccess.Format(time.RFC3339))
+			if _, err := fmt.Fprintf(w, `{"status": "degraded", "last_success": "%s"}`, lastSuccess.Format(time.RFC3339)); err != nil {
+				logger.Error("Failed to write health response", zap.Error(err))
+			}
 			return
 		}
-		fmt.Fprintf(w, `{"status": "ok", "last_success": "%s"}`, lastSuccess.Format(time.RFC3339))
+		if _, err := fmt.Fprintf(w, `{"status": "ok", "last_success": "%s"}`, lastSuccess.Format(time.RFC3339)); err != nil {
+			logger.Error("Failed to write health response", zap.Error(err))
+		}
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
+		if _, err := w.Write([]byte(`<html>
 			<head><title>Qdrant Exporter</title></head>
 			<body>
 			<h1>Qdrant Exporter</h1>
 			<p><a href="/metrics">Metrics</a></p>
 			<p><a href="/health">Health</a></p>
 			</body>
-			</html>`))
+			</html>`)); err != nil {
+			logger.Error("Failed to write root response", zap.Error(err))
+		}
 	})
 
 	if err := http.ListenAndServe(cfg.ListenAddress, nil); err != nil {

@@ -20,7 +20,9 @@ func LoadConfig() (*Config, error) {
 	// Try to load .env file (if running locally)
 	viper.SetConfigFile(".env")
 	if err := viper.ReadInConfig(); err != nil {
-		// It's okay if .env doesn't exist
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
 	}
 
 	viper.SetDefault("qdrant_url", "http://localhost:6333")
@@ -33,9 +35,15 @@ func LoadConfig() (*Config, error) {
 	viper.AutomaticEnv()
 	
 	// Explicitly bind for cases where names might not match perfectly
-	viper.BindEnv("qdrant_url", "QDRANT_URL")
-	viper.BindEnv("qdrant_api_key", "QDRANT_API_KEY")
-	viper.BindEnv("listen_address", "LISTEN_ADDRESS")
+	if err := viper.BindEnv("qdrant_url", "QDRANT_URL"); err != nil {
+		return nil, fmt.Errorf("failed to bind qdrant_url env: %w", err)
+	}
+	if err := viper.BindEnv("qdrant_api_key", "QDRANT_API_KEY"); err != nil {
+		return nil, fmt.Errorf("failed to bind qdrant_api_key env: %w", err)
+	}
+	if err := viper.BindEnv("listen_address", "LISTEN_ADDRESS"); err != nil {
+		return nil, fmt.Errorf("failed to bind listen_address env: %w", err)
+	}
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
