@@ -17,7 +17,23 @@ func TestCollector_Collect(t *testing.T) {
 		case "/collections":
 			fmt.Fprint(w, `{"result": {"collections": [{"name": "test_collection"}]}, "status": "ok"}`)
 		case "/collections/test_collection":
-			fmt.Fprint(w, `{"result": {"vectors_count": 100, "points_count": 100, "status": "green"}, "status": "ok"}`)
+			// Combined response with counts and config
+			fmt.Fprint(w, `{
+				"result": {
+					"vectors_count": 100, 
+					"points_count": 100, 
+					"status": "green",
+					"config": {
+						"params": {
+							"vectors": {
+								"size": 128,
+								"distance": "Cosine"
+							}
+						}
+					}
+				}, 
+				"status": "ok"
+			}`)
 		case "/collections/test_collection/cluster":
 			fmt.Fprint(w, `{"result": {"peer_id": 1, "shards": [{"shard_id": 0, "status": "active"}]}, "status": "ok"}`)
 		default:

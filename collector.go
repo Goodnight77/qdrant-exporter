@@ -15,6 +15,7 @@ type QdrantCollector struct {
 	pointsTotalDesc   *prometheus.Desc
 	shardsTotalDesc   *prometheus.Desc
 	indexedVectorsDesc *prometheus.Desc
+	vectorSizeDesc    *prometheus.Desc
 	
 	scrapeErrors      *prometheus.CounterVec
 	lastScrapeSuccess prometheus.Gauge
@@ -51,6 +52,12 @@ func NewQdrantCollector(client *QdrantClient, logger *zap.Logger) *QdrantCollect
 			[]string{"collection", "vector_name"},
 			nil,
 		),
+		vectorSizeDesc: prometheus.NewDesc(
+			"qdrant_collection_vector_size",
+			"Size (dimensions) of vectors in the collection",
+			[]string{"collection"},
+			nil,
+		),
 		scrapeErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "qdrant_exporter_scrape_errors_total",
@@ -73,6 +80,7 @@ func (qc *QdrantCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- qc.pointsTotalDesc
 	ch <- qc.shardsTotalDesc
 	ch <- qc.indexedVectorsDesc
+	ch <- qc.vectorSizeDesc
 	qc.scrapeErrors.Describe(ch)
 	qc.lastScrapeSuccess.Describe(ch)
 }
@@ -115,6 +123,22 @@ func (qc *QdrantCollector) Collect(ch chan<- prometheus.Metric) {
 				float64(info.VectorsCount),
 				name,
 				"default",
+			)
+		}
+
+		// Vector Size
+		// Note: This adds an extra API call per collection per scrape.
+		// If optimizing, GetCollectionInfo could potentially return this data too.
+		vSize, err := qc.client.GetCollectionVectorSize(name)
+		if err != nil {
+			qc.logger.Debug("Failed to get vector size", zap.String("collection", name), zap.Error(err))
+			// Don't fail the whole scrape for this
+		} else {
+			ch <- prometheus.MustNewConstMetric(
+				qc.vectorSizeDesc,
+				prometheus.GaugeValue,
+				float64(vSize),
+				name,
 			)
 		}
 

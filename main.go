@@ -89,15 +89,84 @@ func main() {
 			logger.Error("Failed to write health response", zap.Error(err))
 		}
 	})
+	// Inspect Handler to view collection details (vector size, points sample)
+	http.HandleFunc("/inspect", func(w http.ResponseWriter, r *http.Request) {
+		collectionName := r.URL.Query().Get("collection")
+		if collectionName == "" {
+			http.Error(w, "Missing collection parameter", http.StatusBadRequest)
+			return
+		}
+
+		vectorSize, err := qdrantClient.GetCollectionVectorSize(collectionName)
+		if err != nil {
+			logger.Error("Failed to get vector size", zap.Error(err))
+			http.Error(w, fmt.Sprintf("Failed to get vector size: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		points, err := qdrantClient.ScrollPoints(collectionName)
+		if err != nil {
+			logger.Error("Failed to scroll points", zap.Error(err))
+			http.Error(w, fmt.Sprintf("Failed to scroll points: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		html := fmt.Sprintf(`<html>
+			<head>
+				<title>Inspect %s</title>
+				<style>
+					table { border-collapse: collapse; width: 100%%; }
+					th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+					tr:nth-child(even) { background-color: #f2f2f2; }
+					th { background-color: #4CAF50; color: white; }
+				</style>
+			</head>
+			<body>
+			<h1>Collection: %s</h1>
+			<p><a href="/">Back to Home</a></p>
+			<h3>Metadata</h3>
+			<ul>
+				<li><strong>Vector Size:</strong> %d</li>
+			</ul>
+			<h3>Sample Points (Top 10)</h3>
+			<table>
+				<tr>
+					<th>ID</th>
+					<th>Payload (Document)</th>
+				</tr>`, collectionName, collectionName, vectorSize)
+
+		for _, p := range points {
+			html += fmt.Sprintf("<tr><td>%s</td><td>%s</td></tr>", p.ID, p.Payload)
+		}
+		html += `</table></body></html>`
+
+		if _, err := w.Write([]byte(html)); err != nil {
+			logger.Error("Failed to write inspect response", zap.Error(err))
+		}
+	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if _, err := w.Write([]byte(`<html>
+		collections, err := qdrantClient.GetCollections()
+		collectionsHtml := "<ul>"
+		if err != nil {
+			collectionsHtml += fmt.Sprintf("<li>Error fetching collections: %v</li>", err)
+		} else {
+			for _, c := range collections {
+				collectionsHtml += fmt.Sprintf(`<li><a href="/inspect?collection=%s">%s</a></li>`, c, c)
+			}
+		}
+		collectionsHtml += "</ul>"
+
+		if _, err := w.Write([]byte(fmt.Sprintf(`<html>
 			<head><title>Qdrant Exporter</title></head>
 			<body>
 			<h1>Qdrant Exporter</h1>
 			<p><a href="/metrics">Metrics</a></p>
 			<p><a href="/health">Health</a></p>
+			<h3>Collections</h3>
+			%s
 			</body>
-			</html>`)); err != nil {
+			</html>`, collectionsHtml))); err != nil {
 			logger.Error("Failed to write root response", zap.Error(err))
 		}
 	})
