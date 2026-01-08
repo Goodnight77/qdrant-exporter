@@ -27,7 +27,7 @@ func TestCollector_Collect(t *testing.T) {
 	defer server.Close()
 
 	logger := zap.NewNop()
-	client := NewQdrantClient(server.URL)
+	client := NewQdrantClient(server.URL, "")
 	collector := NewQdrantCollector(client, logger)
 
 	ch := make(chan prometheus.Metric)
