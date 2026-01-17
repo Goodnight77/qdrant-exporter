@@ -1,8 +1,8 @@
 # config for qdrant exporter
 
 global:
-  scrape_interval: 2s  # how often to scrape
-  scrape_timeout: 10s  # timeout for each scrape
+  scrape_interval: 5s  # how often to scrape
+  scrape_timeout: 3s  # timeout for each scrape
 
 scrape_configs:
   - job_name: 'qdrant-exporter'
