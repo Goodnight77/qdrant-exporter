@@ -1,0 +1,348 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStart": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "thresholds": {
+          "mode": "absolute"
+        }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "qdrant_up",
+          "refId": "A",
+          "legendFormat": "{{__value}}"
+        }
+      ],
+      "title": "Qdrant Status",
+      "type": "gauge",
+      "transformations": [
+        {
+          "id": "convertToNumeric",
+          "options": {
+            "result": {
+              "max": 1,
+              "min": 0
+            }
+          }
+        },
+        {
+          "id": "thresholds",
+          "options": {
+            "mode": "absolute"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": false,
+            "indexByName": false,
+            "renameByName": false,
+            "sortBy": "SortDesc"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Number of points in each collection",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "valueName": "Points"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "qdrant_collection_points",
+          "refId": "A",
+          "legendFormat": "{{collection}}"
+        }
+      ],
+      "title": "Collection Points",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Number of vectors in each collection",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "valueName": "Vectors"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "qdrant_collection_vectors",
+          "refId": "A",
+          "legendFormat": "{{collection}}"
+        }
+      ],
+      "title": "Collection Vectors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Number of indexed vectors in each collection",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "valueName": "Indexed"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "qdrant_collection_indexed_vectors",
+          "refId": "A",
+          "legendFormat": "{{collection}}"
+        }
+      ],
+      "title": "Collection Indexed Vectors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Number of segments in each collection",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "valueName": "Segments"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "qdrant_collection_segments",
+          "refId": "A",
+          "legendFormat": "{{collection}}"
+        }
+      ],
+      "title": "Collection Segments",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Status of each collection (1=green, 2=yellow, 3=red)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "mappings": [
+          {
+            "type": "value",
+            "options": {
+              "1": {
+                "text": "Green",
+                "color": "green",
+                "index": 0
+              },
+              "2": {
+                "text": "Yellow",
+                "color": "yellow",
+                "index": 1
+              },
+              "3": {
+                "text": "Red",
+                "color": "red",
+                "index": 2
+              }
+            }
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 6,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        },
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            {
+              "color": "red",
+              "value": null
+            },
+            {
+              "color": "yellow",
+              "value": 1
+            },
+            {
+              "color": "green",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "qdrant_collection_status",
+          "refId": "A",
+          "legendFormat": "{{collection}}"
+        }
+      ],
+      "title": "Collection Status",
+      "type": "gauge"
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["qdrant", "vector", "database"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "15s", "30s"],
+    "time_options": []
+  },
+  "timezone": "browser",
+  "title": "Qdrant Exporter",
+  "uid": "qdrant-exporter",
+  "version": 1
+}
