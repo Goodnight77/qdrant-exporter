@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  qdrant:
+    build: .
+    ports:
+      - "9999:9999"
+    env:
+      - QDRANT_URL=http://localhost:6333
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./simple/examples/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - qdrant
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
