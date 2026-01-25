@@ -25,13 +25,22 @@ If `QDRANT_API_KEY` is present, the exporter sends it as the `api-key` header.
 
 ### Local Qdrant mode with Docker
 
-From the `qdrant-exporter/` folder:
+From the `simple/` folder:
 
 ```bash
-docker compose --env-file .env.local --profile local up -d
+set -a
+source .env.local
+set +a
+docker compose --profile local up -d --build
 ```
 
 Use this mode when you want the exporter to talk to the local Qdrant container.
+
+You can also use:
+
+```bash
+make local
+```
 
 This starts:
 
@@ -45,10 +54,19 @@ This starts:
 Then start the stack without the local Qdrant profile:
 
 ```bash
-docker compose --env-file .env.cloud up -d
+set -a
+source .env.cloud
+set +a
+docker compose up -d --build
 ```
 
 This mode uses the cloud values from `.env.cloud` and does not start the local Qdrant container.
+
+You can also use:
+
+```bash
+make cloud
+```
 
 This starts:
 
@@ -120,7 +138,7 @@ If you want to confirm Prometheus is scraping the exporter correctly, check:
 - Qdrant data is stored in the named Docker volume `qdrant-storage`
 - collections survive `docker compose up -d` and `docker compose down`
 - collections are lost if the volume is deleted, for example with `docker compose down -v`
-- the local Qdrant container only starts when you use `docker compose --env-file .env.local --profile local up -d`
+- the local Qdrant container only starts when you use `source .env.local` and `docker compose --profile local up -d --build`
 
 ## Next project step
 
@@ -172,4 +190,3 @@ docker compose ps
 docker stop NameOfTheContainer
 docker compose down
 ```
-

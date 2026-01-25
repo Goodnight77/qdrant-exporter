@@ -3,34 +3,58 @@ package main
 import (
 	"encoding/json" //parse json resps from qdrant 
 	"fmt" // for err formatting 
+	"io"
 	"net/http" // http reqs
 )
 
-// QdrantClient wraps Qdrant HTTP API calls
+// qdrantClient wraps Qdrant HTTP API calls
 type QdrantClient struct {
 	baseURL string
+	apiKey  string
 	client  *http.Client 
 }
 
-// NewQdrantClient creates a new Qdrant client
-func NewQdrantClient(url string) *QdrantClient {
+// newQdrantClient creates a new Qdrant client
+func NewQdrantClient(url string, apiKey string) *QdrantClient {
 	return &QdrantClient{ // mem @
 		baseURL: url,
+		apiKey:  apiKey,
 		client:  &http.Client{},
 	}
 }
 
-// GetCollections returns list of collection names
-func (qc *QdrantClient) GetCollections() ([]string, error) {
-	resp, err := qc.client.Get(qc.baseURL + "/collections") // http get req to /collections endpoint
+// doRequest sends a request to Qdrant
+func (qc *QdrantClient) doRequest(path string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, qc.baseURL+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if qc.apiKey != "" {
+		req.Header.Set("api-key", qc.apiKey)
+	}
+
+	resp, err := qc.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call Qdrant API: %w", err)
 	}
-	defer resp.Body.Close() // close resp body when func exists 
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("qdrant API returned status: %s", resp.Status)
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("qdrant API returned status: %s body: %s", resp.Status, string(body))
 	}
+
+	return resp, nil
+}
+
+// GetCollections returns list of collection names
+func (qc *QdrantClient) GetCollections() ([]string, error) {
+	resp, err := qc.doRequest("/collections")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close() // close resp body when func exists 
 
 	var collectionsResp CollectionsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&collectionsResp); err != nil { // parse json resp into struct 
@@ -47,15 +71,11 @@ func (qc *QdrantClient) GetCollections() ([]string, error) {
 
 // GetCollectionInfo returns details for a specific collection
 func (qc *QdrantClient) GetCollectionInfo(name string) (*CollectionInfoResponse, error) {
-	resp, err := qc.client.Get(fmt.Sprintf("%s/collections/%s", qc.baseURL, name))
+	resp, err := qc.doRequest(fmt.Sprintf("/collections/%s", name))
 	if err != nil {
-		return nil, fmt.Errorf("failed to call Qdrant API: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("qdrant API returned status: %s", resp.Status)
-	}
 
 	var collectionInfoResp CollectionInfoResponse
 	if err := json.NewDecoder(resp.Body).Decode(&collectionInfoResp); err != nil {

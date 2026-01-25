@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http" // creating server
+	"os"       // for env vars
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -38,8 +39,17 @@ func main() {
 	// register the gauge metric with Prometheus
 	prometheus.MustRegister(qdrantUp)
 
+	// get qdrant url from env or use default
+	qdrantURL := os.Getenv("QDRANT_URL")
+	if qdrantURL == "" {
+		qdrantURL = "http://localhost:6333"
+	}
+
+	// get api key from env if set
+	qdrantAPIKey := os.Getenv("QDRANT_API_KEY")
+
 	// create qdrant client
-	client := NewQdrantClient("http://localhost:6333")
+	client := NewQdrantClient(qdrantURL, qdrantAPIKey)
 
 	// create and register the collector
 	collector := NewQdrantCollector(client)
@@ -48,9 +58,15 @@ func main() {
 	// for /metrics endpoint (standard Prometheus format)
 	http.Handle("/metrics", promhttp.Handler())
 
+	authStatus := "disabled"
+	if qdrantAPIKey != "" {
+		authStatus = "api key enabled"
+	}
+
 	fmt.Println("server starting on http://localhost:9999")
 	fmt.Println("metrics available at http://localhost:9999/metrics")
-	fmt.Println("Qdrant should be running on http://localhost:6333")
+	fmt.Println("qdrant target:", qdrantURL)
+	fmt.Println("qdrant auth:", authStatus)
 	fmt.Println("\n--- press Ctrl+C to stop ---\n")
 
 	err := http.ListenAndServe(":9999", nil) // start http server
