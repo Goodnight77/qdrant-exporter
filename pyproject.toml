@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qdrant-exporter-sdk"
+version = "0.1.0"
+description = "Python SDK for reading metrics from the qdrant-exporter service"
+readme = "readme.md"
+requires-python = ">=3.10"
+authors = [{ name = "Goodnight" }]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["python_exporter_sdk*"]
