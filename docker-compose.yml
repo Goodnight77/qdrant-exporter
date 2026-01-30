@@ -1,24 +1,41 @@
-version: '3.8'
-
 services:
   qdrant:
+    image: qdrant/qdrant:latest
+    profiles:
+      - local
+    networks:
+      - simple-net
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+
+  exporter:
     build: .
+    networks:
+      - simple-net
     ports:
       - "9999:9999"
-    env:
-      - QDRANT_URL=http://localhost:6333
+    environment:
+      - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
 
   prometheus:
     image: prom/prometheus:latest
+    networks:
+      - simple-net
     ports:
       - "9091:9090"
     volumes:
-      - ./simple/examples/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./examples/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
-      - qdrant
+      - exporter
 
   grafana:
     image: grafana/grafana:latest
+    networks:
+      - simple-net
     ports:
       - "3000:3000"
     environment:
@@ -28,3 +45,11 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+
+volumes:
+  qdrant-storage:
+  grafana-data:
+
+networks:
+  simple-net:
+    name: simple-net

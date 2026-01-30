@@ -1,10 +1,12 @@
+.SHELLFLAGS = -lc
+SHELL := /bin/bash
 .PHONY: local cloud down logs ps rebuild-local rebuild-cloud
 
 local:
-	set -a && source .env.local && set +a && docker compose --profile local up -d --build
+	set -a && source .env.local && set +a && docker compose --profile local up -d
 
 cloud:
-	set -a && source .env.cloud && set +a && docker compose up -d --build
+	set -a && source .env.cloud && set +a && docker compose up -d
 
 down:
 	docker compose down
