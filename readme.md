@@ -105,6 +105,15 @@ Example metrics:
 qdrant_up 1
 ```
 
+## Available metrics
+
+- `qdrant_up` - whether the exporter can reach Qdrant, `1` for up and `0` for down
+- `qdrant_collection_points{collection}` - number of points in each collection
+- `qdrant_collection_vectors{collection}` - number of vectors in each collection
+- `qdrant_collection_indexed_vectors{collection}` - number of indexed vectors in each collection
+- `qdrant_collection_segments{collection}` - number of segments in each collection
+- `qdrant_collection_status{collection}` - collection status mapped to a number: `1` green, `2` yellow, `3` red, `0` unknown
+
 ## Prometheus ports
 
 These ports are different because there are two Prometheus views:
@@ -139,14 +148,6 @@ If you want to confirm Prometheus is scraping the exporter correctly, check:
 - collections survive `docker compose up -d` and `docker compose down`
 - collections are lost if the volume is deleted, for example with `docker compose down -v`
 - the local Qdrant container only starts when you use `source .env.local` and `docker compose --profile local up -d --build`
-
-## Next project step
-
-From `queue.md`, the next necessary step is:
-
-- **Task 6: Add Health Endpoint**
-
-That is the next unfinished core task after the current exporter, client, collector, and compose setup.
 
 ## Python SDK
 
