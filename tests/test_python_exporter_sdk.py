@@ -1,4 +1,4 @@
-from python_exporter_sdk.client import _parse_metrics
+from python_exporter.client import _parse_metrics
 
 
 def test_parse_metrics_extracts_samples_and_labels():

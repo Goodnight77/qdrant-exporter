@@ -26,3 +26,5 @@ This project currently exports the core Qdrant collection metrics.
 - `qdrant_collection_indexed_vectors{collection}`
 - `qdrant_collection_segments{collection}`
 - `qdrant_collection_status{collection}`
+### Simple Grafana dashboard
+![Grafana dashboard screenshot](assets/grafana-dashboard.png)
