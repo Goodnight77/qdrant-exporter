@@ -124,8 +124,30 @@ These ports are different because there are two Prometheus views:
 In this project, you should use:
 
 - [Prometheus graph](http://localhost:9091/graph)
-- [Prometheus targets](http://localhost:9091/targets)
+- [Prometheus targets](http://localhost:9091/targets) (to check health/state)
 - [Prometheus metrics](http://localhost:9091/metrics)
+
+## Grafana access
+
+- [Grafana UI](http://localhost:3000)
+- default credentials: admin / admin
+
+first, add Prometheus as a data source:
+
+1. login to Grafana
+2. go to Configuration → Data Sources → Add data source
+3. select Prometheus
+4. set URL to `http://prometheus:9090` (this is the internal docker network name)
+5. click "Save & Test" - you should see "Data source is working"
+
+then import the pre-built dashboard:
+
+1. go to Dashboards → Import
+2. upload `examples/grafana-dashboard.json`
+3. the dashboard should automatically use the Prometheus data source
+4. click "Import"
+
+The dashboard will show charts for your qdrant collection metrics.
 
 Why you may not see the new Qdrant metrics immediately:
 
@@ -150,21 +172,52 @@ If you want to confirm Prometheus is scraping the exporter correctly, check:
 - the local Qdrant container only starts when you use `source .env.local` and `docker compose --profile local up -d --build`
 
 ## Python SDK
+**note:** this SDK connects to the Go exporter service, so the exporter needs to be running first.
 
-A Python SDK can be added after the exporter behavior is stable and the API surface stops changing.
+The Python SDK reads the exporter metrics endpoint directly, so it stays in sync when you add new metrics in Go.
 
-Best time to build it:
-
-- after the current Docker/local/cloud workflow is confirmed
-- after the health endpoint and any remaining core metrics are settled
-- before or alongside Grafana/dashboard packaging if you want a user-facing integration layer
-
-## Useful commands
+### Install
 
 ```bash
-docker compose ps
-docker compose logs qdrant
-docker compose logs exporter
+python -m pip install -r requirements.txt # for dev/test just to install pytest
+python -m pip install -e .
+```
+
+### Usage
+
+```python
+from python_exporter import ExporterClient
+
+client = ExporterClient("http://localhost:9999")
+
+print(client.metric_names())
+print(client.get_value("qdrant_up"))
+print(client.get_samples("qdrant_collection_points"))
+print(client.get_value("qdrant_collection_points", {"collection": "aaaaa"}))
+print(client.to_json())
+```
+
+### What it gives you
+
+- metric names from the exporter
+- values for any metric the exporter exposes
+- labeled collection metrics without hardcoding each one
+- automatic support for future exporter metrics
+
+### Live test
+
+If the exporter is already running, you can test the Python SDK against it with:
+
+```bash
+set EXPORTER_URL=http://localhost:9999
+python -m pytest tests/test_live_exporter_sdk.py -m integration
+```
+
+If you just want to print the exporter output without pytest:
+
+```bash
+set EXPORTER_URL=http://localhost:9999
+python tests/inspect_exporter.py # inspect first 5 collections 
 ```
 
 
@@ -191,3 +244,14 @@ docker compose ps
 docker stop NameOfTheContainer
 docker compose down
 ```
+
+### Useful commands
+
+```bash
+docker compose ps
+docker compose logs qdrant
+docker compose logs exporter
+```
+
+## Author 
+[Mohamed Arbi Nsibi](https://www.linkedin.com/in/mohammed-arbi-nsibi-584a43241/)
