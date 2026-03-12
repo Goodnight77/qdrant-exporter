@@ -1,0 +1,11 @@
+.env
+.env.cloud
+
+.env.*
+*.pyc
+__pycache__/
+*.egg-info/
+.venv/
+
+grafana-v11.3.1/
+pytest.ini
