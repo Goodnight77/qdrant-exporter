@@ -1,4 +1,32 @@
-# qdrant-exporter
+<div align="center">
+<img src="assets/Exporter-I.jpeg" alt="Qdrant Exporter" height="300" width="440">
+
+<h1>Qdrant Exporter</h1>
+
+<p>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/Goodnight77/qdrant-exporter/commits/main"><img src="https://img.shields.io/github/last-commit/Goodnight77/qdrant-exporter" alt="GitHub last commit"></a>
+  <a href="https://github.com/Goodnight77/qdrant-exporter/stargazers"><img src="https://img.shields.io/github/stars/Goodnight77/qdrant-exporter?style=social" alt="GitHub stars"></a>
+  <a href="https://discord.gg/qdrant"><img src="https://img.shields.io/badge/Discord-Qdrant%20Community-blueviolet" alt="Discord"></a>
+</p>
+
+<p>
+    ✨ A simple Prometheus exporter for Qdrant vector database that exposes per-collection metrics and enhances monitoring. ✨
+</p>
+
+</div>
+
+---
+
+<div align="center">
+  <h3>
+    <a href="#what-it-does">Features</a> |
+    <a href="#how-to-run">Quick Start</a> |
+    <a href="#available-metrics">Metrics</a> |
+    <a href="#python-sdk">Python SDK</a> |
+    <a href="#troubleshooting-important">Help</a>
+  </h3>
+</div>
 
 A simple Prometheus exporter for Qdrant vector database that exposes per-collection metrics.
 
@@ -24,6 +52,8 @@ If `QDRANT_API_KEY` is present, the exporter sends it as the `api-key` header.
 ## How to run
 
 ### Local Qdrant mode with Docker
+
+![Docker setup](assets/docker-images.png)
 
 From the `simple/` folder:
 
@@ -97,6 +127,8 @@ Visit:
 
 - [Exporter metrics](http://localhost:9999/metrics)
 
+![Exporter metrics](assets/9999-exporter-metrics.png)
+
 Example metrics:
 
 ```text
@@ -106,6 +138,8 @@ qdrant_up 1
 ```
 
 ## Available metrics
+#### prometheus metrics example 
+![Prometheus indexed vectors](assets/prometheus-indexed-vects.png)
 
 - `qdrant_up` - whether the exporter can reach Qdrant, `1` for up and `0` for down
 - `qdrant_collection_points{collection}` - number of points in each collection
@@ -131,6 +165,8 @@ In this project, you should use:
 
 - [Grafana UI](http://localhost:3000)
 - default credentials: admin / admin
+
+![Grafana dashboard](assets/grafana-dashboard.png)
 
 first, add Prometheus as a data source:
 
@@ -173,6 +209,8 @@ If you want to confirm Prometheus is scraping the exporter correctly, check:
 
 ## Python SDK
 **note:** this SDK connects to the Go exporter service, so the exporter needs to be running first.
+
+![JSON collection details](assets/json_coll_details.png)
 
 The Python SDK reads the exporter metrics endpoint directly, so it stays in sync when you add new metrics in Go.
 
