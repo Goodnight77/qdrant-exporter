@@ -1,5 +1,5 @@
 <div align="center">
-<img src="assets/Exporter-I.jpeg" alt="Qdrant Exporter" height="300" width="440">
+<img src="assets/exporter-img.png" alt="Qdrant Exporter" height="300" width="440">
 
 <h1>Qdrant Exporter</h1>
 
